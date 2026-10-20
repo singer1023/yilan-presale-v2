@@ -112,13 +112,13 @@
   <button id="menuBtn" aria-label="開啟功能列" aria-expanded="false">☰<span class="dot" id="menuDot"></span></button>
   <img class="logo" src="icon-192.png" alt="虹揚廣告 LOGO">
   <div class="ttl"><h1>虹揚廣告</h1><p class="sub" id="pageTitle">實價登錄查詢</p></div>
-  <div class="ver" id="ver">V2.03</div>
+  <div class="ver" id="ver">V2.04</div>
 </header>
 
 <div id="mask"></div>
 <aside id="drawer" aria-label="功能列">
   <div class="dhead">
-    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.03</span></small></div></div>
+    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.04</span></small></div></div>
     <div class="who" id="who"></div>
   </div>
   <nav class="menu">
@@ -202,7 +202,7 @@
       <div class="acts"><a class="rl" id="rptLine" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 錯誤回報</a><a class="rt" href="tel:0926109163">📞 電話聯絡</a></div>
     </div>
   </section>
-  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.03</span>（測試版・固定網址）</p>
+  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.04</span>（測試版・固定網址）</p>
 </main>
 
 <div class="fab"><a class="ft" href="tel:0926109163">📞 電話</a><a class="fl" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 聯絡</a></div>
@@ -211,7 +211,7 @@
 
 <script src="config.js"></script>
 <script>
-const APP_VERSION = "V2.03";
+const APP_VERSION = "V2.04";
 const H = "https:/" + "/";
 const TOWNS = ["宜蘭市","頭城鎮","礁溪鄉","壯圍鄉","員山鄉","羅東鎮","蘇澳鎮","冬山鄉","五結鄉","三星鄉","大同鄉","南澳鄉"];
 const $ = id => document.getElementById(id);
@@ -223,11 +223,28 @@ let ROWS = [], L591 = {}, LJ = {}, LIC = {}, DATA = null, READY = false;
 /* ============ 與 Apps Script 後端溝通（GET；跨網域） ============ */
 const KEY = "hy2_k";
 const kq = () => { const k = lsGet(KEY); return k ? "&k=" + encodeURIComponent(k) : ""; };
+function apiJsonp(q){
+  return new Promise((res, rej) => {
+    const cb = "hycb" + Date.now() + Math.floor(Math.random()*1e6);
+    const sc = document.createElement("script");
+    const t = setTimeout(() => { cleanup(); rej(new Error("JSONP逾時")); }, 60000);
+    function cleanup(){ clearTimeout(t); try{ delete window[cb]; }catch(e){ window[cb]=undefined; } sc.remove(); }
+    window[cb] = d => { cleanup(); res(d); };
+    sc.onerror = () => { cleanup(); rej(new Error("JSONP載入失敗")); };
+    sc.src = API_URL + "?" + q + "&cb=" + cb + kq();
+    document.head.appendChild(sc);
+  });
+}
 async function api(params){
   const q = Object.keys(params).map(k => encodeURIComponent(k) + "=" + encodeURIComponent(params[k])).join("&");
-  const r = await fetch(API_URL + "?" + q + kq(), { cache: "no-store" });
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  return r.json();
+  try {
+    const r = await fetch(API_URL + "?" + q + kq());
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } catch (e1) {
+    try { return await apiJsonp(q); }
+    catch (e2) { throw new Error((e1 && e1.message || e1) + " / " + (e2 && e2.message || e2)); }
+  }
 }
 
 /* ============ 抽屜選單／頁面切換 ============ */
