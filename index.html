@@ -112,13 +112,13 @@
   <button id="menuBtn" aria-label="開啟功能列" aria-expanded="false">☰<span class="dot" id="menuDot"></span></button>
   <img class="logo" src="icon-192.png" alt="虹揚廣告 LOGO">
   <div class="ttl"><h1>虹揚廣告</h1><p class="sub" id="pageTitle">實價登錄查詢</p></div>
-  <div class="ver" id="ver">V2.07</div>
+  <div class="ver" id="ver">V2.08</div>
 </header>
 
 <div id="mask"></div>
 <aside id="drawer" aria-label="功能列">
   <div class="dhead">
-    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.07</span></small></div></div>
+    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.08</span></small></div></div>
     <div class="who" id="who"></div>
   </div>
   <nav class="menu">
@@ -202,7 +202,7 @@
       <div class="acts"><a class="rl" id="rptLine" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 錯誤回報</a><a class="rt" href="tel:0926109163">📞 電話聯絡</a></div>
     </div>
   </section>
-  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.07</span>（測試版・固定網址）</p>
+  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.08</span>（測試版・固定網址）</p>
 </main>
 
 <div class="fab"><a class="ft" href="tel:0926109163">📞 電話</a><a class="fl" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 聯絡</a></div>
@@ -211,7 +211,7 @@
 
 <script src="config.js"></script>
 <script>
-const APP_VERSION = "V2.07";
+const APP_VERSION = "V2.08";
 const H = "https:/" + "/";
 const TOWNS = ["宜蘭市","頭城鎮","礁溪鄉","壯圍鄉","員山鄉","羅東鎮","蘇澳鎮","冬山鄉","五結鄉","三星鄉","大同鄉","南澳鄉"];
 const $ = id => document.getElementById(id);
@@ -398,6 +398,7 @@ async function loadReports(){
   }
   drawReports();
 }
+function evt(type, note){ try { api({ api: "evt", cid: getCid(), type: type, note: note || "" }).catch(() => {}); } catch (e) {} }
 async function drawReports(){
   if (!RPT.length) { $("rptChips").innerHTML = ""; $("rptBody").innerHTML = `<p class="muted">尚無月報。（月報 JPG 請放在雲端硬碟資料夾「實價登錄月報」）</p>`; return; }
   $("rptChips").innerHTML = RPT.map((m, i) => `<button class="chip${i === RPT_SEL ? " on" : ""}" data-i="${i}">${esc(m.label)}</button>`).join("");
@@ -413,6 +414,8 @@ async function drawReports(){
     imgs.map((im, k) => `<img class="rptimg" src="${im.uri}" alt="${esc(m.label)}第${k + 1}頁">`).join("") +
     `<div class="rptbar">${imgs.map((im, k) => `<a href="${im.uri}" download="${esc(im.name)}">⬇ 下載第 ${k + 1} 頁</a>`).join("")}</div>` +
     `<p class="muted">點圖片可放大。資料以內政部實價登錄為準，製表當日統計。</p>`;
+  if (window.__rv !== m.ym) { window.__rv = m.ym; evt("rpt_view", m.label); }
+  $("rptBody").querySelectorAll(".rptbar a[download]").forEach((a, k) => a.addEventListener("click", () => evt("rpt_dl", m.label + " 第" + (k + 1) + "頁")));
   $("rptBody").querySelectorAll(".rptimg").forEach(im => im.onclick = () => { $("lbimg").src = im.src; $("lightbox").style.display = "block"; });
 }
 $("lbx").onclick = () => { $("lightbox").style.display = "none"; };
@@ -511,7 +514,7 @@ function onData(d){
     if (!d || d.error) throw new Error(d && d.error ? d.error : "沒有收到資料");
     ROWS = d.rows; L591 = d.l591 || {}; LJ = d.lj || {}; LIC = d.lic || {}; READY = true; clearInterval(_slow);
     const v = APP_VERSION; $("ver").textContent = v; $("ver2").textContent = v; $("ver3").textContent = v;
-    if (d.fileId) { const a = $("dl"); a.href = H + "docs.google.com/spreadsheets/d/" + encodeURIComponent(d.fileId) + "/export?format=xlsx"; a.style.display = "inline-block"; }
+    if (d.fileId) { const a = $("dl"); a.href = H + "docs.google.com/spreadsheets/d/" + encodeURIComponent(d.fileId) + "/export?format=xlsx"; a.style.display = "inline-block"; if (!a.__ev) { a.__ev = 1; a.addEventListener("click", () => evt("raw", "")); } }
     const yms = ROWS.map(r => r[1]), ym = x => `${Math.floor(x/100)}年${x%100}月`;
     $("srcInfo").textContent = `資料來源：「實價登錄」預售屋買賣 ${ROWS.length} 筆` + (yms.length ? `（成交 ${ym(Math.min(...yms))} ~ ${ym(Math.max(...yms))}）` : "") + `，更新於 ${d.updated}` + (d.skipped ? `；${d.skipped} 筆交易日期無法辨識已略過` : "");
     const lt = d.latest || ""; $("latest").textContent = "✔ 資料已是最新：" + (lt || ("更新於 " + d.updated));
