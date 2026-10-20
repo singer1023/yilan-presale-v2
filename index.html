@@ -112,13 +112,13 @@
   <button id="menuBtn" aria-label="開啟功能列" aria-expanded="false">☰<span class="dot" id="menuDot"></span></button>
   <img class="logo" src="icon-192.png" alt="虹揚廣告 LOGO">
   <div class="ttl"><h1>虹揚廣告</h1><p class="sub" id="pageTitle">實價登錄查詢</p></div>
-  <div class="ver" id="ver">V2.05</div>
+  <div class="ver" id="ver">V2.06</div>
 </header>
 
 <div id="mask"></div>
 <aside id="drawer" aria-label="功能列">
   <div class="dhead">
-    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.05</span></small></div></div>
+    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.06</span></small></div></div>
     <div class="who" id="who"></div>
   </div>
   <nav class="menu">
@@ -202,7 +202,7 @@
       <div class="acts"><a class="rl" id="rptLine" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 錯誤回報</a><a class="rt" href="tel:0926109163">📞 電話聯絡</a></div>
     </div>
   </section>
-  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.05</span>（測試版・固定網址）</p>
+  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.06</span>（測試版・固定網址）</p>
 </main>
 
 <div class="fab"><a class="ft" href="tel:0926109163">📞 電話</a><a class="fl" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 聯絡</a></div>
@@ -211,7 +211,7 @@
 
 <script src="config.js"></script>
 <script>
-const APP_VERSION = "V2.05";
+const APP_VERSION = "V2.06";
 const H = "https:/" + "/";
 const TOWNS = ["宜蘭市","頭城鎮","礁溪鄉","壯圍鄉","員山鄉","羅東鎮","蘇澳鎮","冬山鄉","五結鄉","三星鄉","大同鄉","南澳鄉"];
 const $ = id => document.getElementById(id);
@@ -312,7 +312,7 @@ async function finishLogin(r){
   ME = { name: r.name }; if (r.s) { SESS = r.s; lsSet("hy2_sess", SESS); } if (r.cid) lsSet("hy_cid", r.cid);
   let subs = r.subs || []; const local = loadGuest();
   if (local.length) { try { const m = await api(Object.assign({ api: "subsmerge", d: JSON.stringify(local) }, authP())); if (!m.error) { subs = m.subs || subs; lsSet(GK, "[]"); } } catch (e) {} }
-  SUBS = subs; CLOUD = "✔ 已同步到雲端（以 LINE 帳號保存）";
+  SUBS = subs; CLOUD = "✔ 已同步到雲端（以 LINE 帳號保存）"; saveMeCache();
   $("myCid").textContent = getCid(); renderWho(); updateSubCnt(); refreshSubBtns(); renderSubs();
 }
 async function tryLogin(auth){   /* 回傳 true=成功、false=憑證無效、null=連線失敗 */
@@ -320,16 +320,17 @@ async function tryLogin(auth){   /* 回傳 true=成功、false=憑證無效、nu
   catch (e) { return null; }
 }
 function doLogout(){
-  try { liff.logout(); } catch (e) {} ME = null; TOKEN = ""; SESS = ""; lsSet("hy2_sess", ""); lsSet("hy_cid", Math.random().toString(36).slice(2, 10) + Date.now().toString(36));
+  try { liff.logout(); } catch (e) {} ME = null; TOKEN = ""; SESS = ""; lsSet("hy2_sess", ""); lsSet("hy2_me", ""); lsSet("hy_cid", Math.random().toString(36).slice(2, 10) + Date.now().toString(36));
   $("myCid").textContent = getCid(); SUBS = loadGuest(); renderWho(); updateSubCnt(); renderSubs(); refreshSubBtns(); openMenu(false);
 }
 let LINE_DONE; const LINE_READY = new Promise(r => { LINE_DONE = r; });
 async function initLine(){
   renderWho(); setTimeout(LINE_DONE, 9000);   /* LINE 元件太慢時，最多等 9 秒就先記錄使用 */
   if (SESS) {   /* 有本系統憑證：直接登入，不必載入 LINE 元件 */
+    try { const c = JSON.parse(lsGet("hy2_me") || "null"); if (c && c.name) { ME = { name: c.name }; SUBS = c.subs || []; CLOUD = "同步中…"; renderWho(); updateSubCnt(); refreshSubBtns(); renderSubs(); } } catch (e) {}   /* 先用上次的名字與訂閱立即顯示，背景再向雲端確認 */
     const ok = await tryLogin({ s: SESS });
     if (ok) { LINE_DONE(); return; }
-    if (ok === false) { SESS = ""; lsSet("hy2_sess", ""); }
+    if (ok === false) { SESS = ""; lsSet("hy2_sess", ""); lsSet("hy2_me", ""); ME = null; SUBS = loadGuest(); renderWho(); updateSubCnt(); refreshSubBtns(); renderSubs(); }
     else { CLOUD = "目前無法連線，暫以訪客顯示"; renderSubs(); LINE_DONE(); return; }
   }
   if (!LIFF_ON) { LINE_DONE(); return; }
@@ -354,7 +355,8 @@ async function initLine(){
 let SUBS = [], CLOUD = "";
 const GK = "hy2_subs_guest";
 function loadGuest(){ try { return JSON.parse(lsGet(GK) || "[]"); } catch (e) { return []; } }
-function updateSubCnt(){ const n = SUBS.length; const c = $("subCnt"); c.textContent = n; c.style.display = n ? "" : "none"; }
+function saveMeCache(){ try { if (ME) lsSet("hy2_me", JSON.stringify({ name: ME.name, subs: SUBS })); } catch (e) {} }
+function updateSubCnt(){ saveMeCache(); const n = SUBS.length; const c = $("subCnt"); c.textContent = n; c.style.display = n ? "" : "none"; }
 function isSub(t, n){ return SUBS.some(x => x.t === t && x.n === n); }
 async function toggleSub(t, n){
   const had = isSub(t, n);
