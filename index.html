@@ -275,9 +275,14 @@ function doLogin(){
   try { liff.login({ redirectUri: location.href.split("#")[0] }); } catch (e) { modal("LINE 登入失敗", esc(e.message || e), [["關閉", null]]); }
 }
 function doLogout(){ try { liff.logout(); } catch (e) {} ME = null; TOKEN = ""; SUBS = loadGuest(); renderWho(); updateSubCnt(); renderSubs(); refreshSubBtns(); openMenu(false); }
+let LINE_DONE; const LINE_READY = new Promise(r => { LINE_DONE = r; });
+function hashId(s){ let h1 = 0xdeadbeef ^ 7, h2 = 0x41c6ce57 ^ 7; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); }
 function initLine(){
   renderWho();
-  if (!LIFF_ON) return;
+  if (!LIFF_ON) { LINE_DONE(); return; }
+  setTimeout(LINE_DONE, 8000);   /* LINE 元件太慢時，最多等 8 秒就先記錄使用 */
   const s = document.createElement("script"); s.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
   s.onload = async () => {
     try {
@@ -285,12 +290,14 @@ function initLine(){
       if (liff.isLoggedIn()) {
         TOKEN = liff.getAccessToken() || "";
         const p = await liff.getProfile(); ME = { name: p.displayName };
+        try { lsSet("hy_cid", "L" + hashId(p.userId)); } catch (e) {}   /* 登入者改用固定的裝置代碼（由 LINE 帳號雜湊而來，不含個資），在 LINE 內建瀏覽器每次開也是同一個 */
         try { const f = await liff.getFriendship(); FRIEND = !!f.friendFlag; } catch (e) { FRIEND = null; }
         renderWho(); await syncLineSubs();
       }
     } catch (e) { console.warn("LIFF", e); CLOUD = "LINE 登入初始化失敗：" + (e && e.message ? e.message : e); renderSubs(); }
+    LINE_DONE();
   };
-  s.onerror = () => { CLOUD = "無法載入 LINE 登入元件，請確認網路"; renderSubs(); };
+  s.onerror = () => { CLOUD = "無法載入 LINE 登入元件，請確認網路"; renderSubs(); LINE_DONE(); };
   document.head.appendChild(s);
 }
 
@@ -499,13 +506,12 @@ async function load(){
     if (d && d.error) throw new Error(d.error);
     try { lsSet(CK, JSON.stringify(d)); } catch (e) {}
     if (!READY || !cached || cached.updated !== d.updated) onData(d);
-    logUse();
   } catch (e) {
     if (READY) { $("srcInfo").textContent += "　（連線失敗，顯示的是上次儲存的資料）"; }
     else { clearInterval(_slow); stage("無法取得資料：" + (e && e.message ? e.message : e) + "（請確認網路，並確認 Apps Script 已部署為「所有人」可存取）"); }
   }
 }
-SUBS = loadGuest(); updateSubCnt(); initLine(); checkNewReport(); load();
+SUBS = loadGuest(); updateSubCnt(); $("myCid").textContent = getCid(); initLine(); LINE_READY.then(() => { $("myCid").textContent = getCid(); logUse(); }); checkNewReport(); load();
 
 /* ============ 安裝到主畫面 ============ */
 let _dip = null;
