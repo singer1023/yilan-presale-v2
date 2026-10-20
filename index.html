@@ -112,13 +112,13 @@
   <button id="menuBtn" aria-label="開啟功能列" aria-expanded="false">☰<span class="dot" id="menuDot"></span></button>
   <img class="logo" src="icon-192.png" alt="虹揚廣告 LOGO">
   <div class="ttl"><h1>虹揚廣告</h1><p class="sub" id="pageTitle">實價登錄查詢</p></div>
-  <div class="ver" id="ver">V2.02</div>
+  <div class="ver" id="ver">V2.03</div>
 </header>
 
 <div id="mask"></div>
 <aside id="drawer" aria-label="功能列">
   <div class="dhead">
-    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.02</span></small></div></div>
+    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.03</span></small></div></div>
     <div class="who" id="who"></div>
   </div>
   <nav class="menu">
@@ -202,7 +202,7 @@
       <div class="acts"><a class="rl" id="rptLine" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 錯誤回報</a><a class="rt" href="tel:0926109163">📞 電話聯絡</a></div>
     </div>
   </section>
-  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.02</span>（測試版・固定網址）</p>
+  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.03</span>（測試版・固定網址）</p>
 </main>
 
 <div class="fab"><a class="ft" href="tel:0926109163">📞 電話</a><a class="fl" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 聯絡</a></div>
@@ -211,7 +211,7 @@
 
 <script src="config.js"></script>
 <script>
-const APP_VERSION = "V2.02";
+const APP_VERSION = "V2.03";
 const H = "https:/" + "/";
 const TOWNS = ["宜蘭市","頭城鎮","礁溪鄉","壯圍鄉","員山鄉","羅東鎮","蘇澳鎮","冬山鄉","五結鄉","三星鄉","大同鄉","南澳鄉"];
 const $ = id => document.getElementById(id);
@@ -255,44 +255,76 @@ function modal(title, body, btns, input){
   $("modal").style.display = "flex"; if (input) setTimeout(() => i.focus(), 50);
 }
 
-/* ============ LINE 登入（LIFF） ============ */
-let ME = null, TOKEN = "", FRIEND = null;   /* ME = {name}；TOKEN = LINE access token */
+/* ============ LINE 登入（LIFF）＋長效登入憑證（主畫面圖示也能維持登入） ============ */
+let ME = null, TOKEN = "", SESS = lsGet("hy2_sess") || "", FRIEND = null;   /* ME={name}；TOKEN=LINE access token；SESS=本系統長效憑證（180 天，使用中會自動延長） */
 const LIFF_ON = typeof LIFF_ID !== "undefined" && LIFF_ID && /^\d+-\w+$/.test(LIFF_ID);
+const authP = () => SESS ? { s: SESS } : { t: TOKEN };
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isStandalone = () => (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone;
 function renderWho(){
   const w = $("who");
   if (ME) {
     w.innerHTML = `<div class="name">👤 ${esc(ME.name || "LINE 使用者")}</div><div>已用 LINE 登入，訂閱會跟著帳號走</div>` +
       (FRIEND === false ? `<div style="margin-top:6px;background:#fff7e6;color:#6b4a00;border-radius:8px;padding:6px 8px;font-size:13px">尚未加入 @homeyang 好友，加入後才收得到通知。<br><a href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener" style="color:#b0191e;font-weight:700">點此加入好友</a></div>` : "") +
-      `<button class="out" id="logoutBtn">登出</button>`;
-    $("logoutBtn").onclick = doLogout;
+      `<button class="out" id="pairBtn" style="background:#fff;color:#b0191e;margin-top:8px">📱 取得「桌面版」綁定碼</button><button class="out" id="logoutBtn">登出</button>`;
+    $("logoutBtn").onclick = doLogout; $("pairBtn").onclick = pairStart;
   } else {
-    w.innerHTML = `<div class="name">👤 訪客</div><div>可使用查詢與月報；登入 LINE 後訂閱會保留，也能收到通知</div><button id="loginBtn">以 LINE 登入</button>`;
-    $("loginBtn").onclick = doLogin;
+    w.innerHTML = `<div class="name">👤 訪客</div><div>可使用查詢與月報；登入 LINE 後訂閱會保留，也能收到通知</div><button id="loginBtn">以 LINE 登入</button>` +
+      `<button class="out" id="pairUseBtn" style="margin-top:8px;font-weight:400;font-size:14px">已在 LINE 登入？輸入綁定碼</button>`;
+    $("loginBtn").onclick = doLogin; $("pairUseBtn").onclick = pairUse;
   }
 }
 function doLogin(){
+  if (isIOS() && isStandalone()) { modal("桌面版登入方式", "iPhone 的桌面圖示版無法直接完成 LINE 登入。<br><br>請先<b>用 LINE 開啟查詢連結</b>登入，到選單按「取得桌面版綁定碼」，再回到桌面圖示版按「輸入綁定碼」。只需做一次，之後會一直保持登入。", [["知道了", null], ["輸入綁定碼", pairUse, "primary"]]); return; }
   if (!LIFF_ON) { modal("LINE 登入", "尚未設定 LIFF ID（config.js），目前只能以訪客使用。", [["知道了", null, "primary"]]); return; }
   try { liff.login({ redirectUri: location.href.split("#")[0] }); } catch (e) { modal("LINE 登入失敗", esc(e.message || e), [["關閉", null]]); }
 }
-function doLogout(){ try { liff.logout(); } catch (e) {} ME = null; TOKEN = ""; SUBS = loadGuest(); renderWho(); updateSubCnt(); renderSubs(); refreshSubBtns(); openMenu(false); }
+async function pairStart(){
+  try { const r = await api(Object.assign({ api: "pairstart" }, authP())); if (r.error) throw new Error(r.error === "LINE_AUTH" ? "登入已過期，請重新登入" : r.error);
+    modal("桌面版綁定碼", `<div style="font-size:34px;font-weight:700;letter-spacing:6px;text-align:center;color:#b0191e;margin:8px 0">${esc(r.code)}</div>請在桌面圖示版（或其他裝置）選單按「輸入綁定碼」，<b>10 分鐘內</b>輸入一次即可，一個綁定碼只能用一次。`, [["完成", null, "primary"]]);
+  } catch (e) { modal("取得綁定碼失敗", esc(e && e.message || e), [["關閉", null]]); }
+}
+function pairUse(){
+  modal("輸入綁定碼", "請在已用 LINE 登入的裝置，選單按「取得桌面版綁定碼」，再把 6 位數字輸入這裡。", [["取消", null], ["登入", async v => {
+    try { const r = await api({ api: "pairuse", c: v }); if (r.error) throw new Error(r.error); await finishLogin(r); }
+    catch (e) { modal("綁定失敗", esc(e && e.message || e), [["關閉", null]]); }
+  }, "primary"]], "6 位數字");
+}
+/* 登入成功後的共同處理：存憑證、固定裝置代碼、載入雲端訂閱（並把訪客時的本機訂閱併入） */
+async function finishLogin(r){
+  ME = { name: r.name }; if (r.s) { SESS = r.s; lsSet("hy2_sess", SESS); } if (r.cid) lsSet("hy_cid", r.cid);
+  let subs = r.subs || []; const local = loadGuest();
+  if (local.length) { try { const m = await api(Object.assign({ api: "subsmerge", d: JSON.stringify(local) }, authP())); if (!m.error) { subs = m.subs || subs; lsSet(GK, "[]"); } } catch (e) {} }
+  SUBS = subs; CLOUD = "✔ 已同步到雲端（以 LINE 帳號保存）";
+  $("myCid").textContent = getCid(); renderWho(); updateSubCnt(); refreshSubBtns(); renderSubs();
+}
+async function tryLogin(auth){   /* 回傳 true=成功、false=憑證無效、null=連線失敗 */
+  try { const r = await api(Object.assign({ api: "me" }, auth)); if (r.error) { return r.error === "LINE_AUTH" ? false : null; } await finishLogin(r); return true; }
+  catch (e) { return null; }
+}
+function doLogout(){
+  try { liff.logout(); } catch (e) {} ME = null; TOKEN = ""; SESS = ""; lsSet("hy2_sess", ""); lsSet("hy_cid", Math.random().toString(36).slice(2, 10) + Date.now().toString(36));
+  $("myCid").textContent = getCid(); SUBS = loadGuest(); renderWho(); updateSubCnt(); renderSubs(); refreshSubBtns(); openMenu(false);
+}
 let LINE_DONE; const LINE_READY = new Promise(r => { LINE_DONE = r; });
-function hashId(s){ let h1 = 0xdeadbeef ^ 7, h2 = 0x41c6ce57 ^ 7; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); }
-function initLine(){
-  renderWho();
+async function initLine(){
+  renderWho(); setTimeout(LINE_DONE, 9000);   /* LINE 元件太慢時，最多等 9 秒就先記錄使用 */
+  if (SESS) {   /* 有本系統憑證：直接登入，不必載入 LINE 元件 */
+    const ok = await tryLogin({ s: SESS });
+    if (ok) { LINE_DONE(); return; }
+    if (ok === false) { SESS = ""; lsSet("hy2_sess", ""); }
+    else { CLOUD = "目前無法連線，暫以訪客顯示"; renderSubs(); LINE_DONE(); return; }
+  }
   if (!LIFF_ON) { LINE_DONE(); return; }
-  setTimeout(LINE_DONE, 8000);   /* LINE 元件太慢時，最多等 8 秒就先記錄使用 */
   const s = document.createElement("script"); s.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
   s.onload = async () => {
     try {
       await liff.init({ liffId: LIFF_ID });
       if (liff.isLoggedIn()) {
         TOKEN = liff.getAccessToken() || "";
-        const p = await liff.getProfile(); ME = { name: p.displayName };
-        try { lsSet("hy_cid", "L" + hashId(p.userId)); } catch (e) {}   /* 登入者改用固定的裝置代碼（由 LINE 帳號雜湊而來，不含個資），在 LINE 內建瀏覽器每次開也是同一個 */
-        try { const f = await liff.getFriendship(); FRIEND = !!f.friendFlag; } catch (e) { FRIEND = null; }
-        renderWho(); await syncLineSubs();
+        const ok = await tryLogin({ t: TOKEN });
+        if (ok === false) { CLOUD = "LINE 驗證失敗，請登出後重新登入"; renderSubs(); }
+        else if (ok) { try { const f = await liff.getFriendship(); FRIEND = !!f.friendFlag; } catch (e) { FRIEND = null; } renderWho(); }
       }
     } catch (e) { console.warn("LIFF", e); CLOUD = "LINE 登入初始化失敗：" + (e && e.message ? e.message : e); renderSubs(); }
     LINE_DONE();
@@ -307,24 +339,13 @@ const GK = "hy2_subs_guest";
 function loadGuest(){ try { return JSON.parse(lsGet(GK) || "[]"); } catch (e) { return []; } }
 function updateSubCnt(){ const n = SUBS.length; const c = $("subCnt"); c.textContent = n; c.style.display = n ? "" : "none"; }
 function isSub(t, n){ return SUBS.some(x => x.t === t && x.n === n); }
-async function syncLineSubs(){
-  CLOUD = "同步訂閱中…"; renderSubs();
-  try {
-    const local = loadGuest();
-    let r = await api({ api: "me", t: TOKEN });
-    if (r.error) throw new Error(r.error === "LINE_AUTH" ? "LINE 驗證失敗，請重新登入" : r.error);
-    if (local.length) { r = await api({ api: "subsmerge", t: TOKEN, d: JSON.stringify(local) }); if (r.error) throw new Error(r.error); lsSet(GK, "[]"); }
-    SUBS = r.subs || []; CLOUD = "✔ 已同步到雲端（以 LINE 帳號保存）";
-  } catch (e) { CLOUD = "✘ 同步失敗：" + (e && e.message ? e.message : e); }
-  updateSubCnt(); refreshSubBtns(); renderSubs();
-}
 async function toggleSub(t, n){
   const had = isSub(t, n);
   if (had) SUBS = SUBS.filter(x => !(x.t === t && x.n === n)); else SUBS.push({ t, n, at: Date.now() });
   updateSubCnt(); refreshSubBtns(); if ($("v-subs").classList.contains("on")) renderSubs();
   if (!ME) { lsSet(GK, JSON.stringify(SUBS)); return; }
   try {
-    const r = await api({ api: "subtoggle", t: TOKEN, town: t, name: n, on: had ? 0 : 1 });
+    const r = await api(Object.assign({ api: "subtoggle", town: t, name: n, on: had ? 0 : 1 }, authP()));
     if (r.error) throw new Error(r.error === "LINE_AUTH" ? "登入已過期，請重新登入" : r.error);
     SUBS = r.subs || SUBS; CLOUD = "✔ 已同步到雲端（以 LINE 帳號保存）";
   } catch (e) { CLOUD = "✘ 同步失敗：" + (e && e.message ? e.message : e); }
