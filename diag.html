@@ -1,0 +1,16 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>連線診斷</title>
+<style>body{font-family:-apple-system,"Microsoft JhengHei",sans-serif;padding:14px;font-size:15px}pre{white-space:pre-wrap;word-break:break-all;background:#f4f4f4;padding:8px;border-radius:6px;font-size:12px}button{font-size:17px;padding:10px 18px;background:#8c1216;color:#fff;border:0;border-radius:8px}</style></head><body>
+<h3>連線診斷</h3><p>按下按鈕，等約 20 秒，把整個畫面截圖給我。</p><button id="b">開始測試</button><pre id="o"></pre>
+<script src="config.js"></script>
+<script>
+var o=document.getElementById("o");function L(s){o.textContent+=s+"\n"}
+function jsonp(q){return new Promise(function(res,rej){var cb="dg"+Math.floor(Math.random()*1e9),sc=document.createElement("script"),t=setTimeout(function(){rej(new Error("逾時"))},20000);window[cb]=function(d){clearTimeout(t);res(d)};sc.onerror=function(){clearTimeout(t);rej(new Error("script onerror"))};sc.src=API_URL+"?"+q+"&cb="+cb;document.head.appendChild(sc)})}
+document.getElementById("b").onclick=async function(){
+o.textContent="";L("頁面網址: "+location.href);L("API_URL: "+API_URL.slice(0,60)+"…");L("UA: "+navigator.userAgent);L("standalone: "+(navigator.standalone));L("online: "+navigator.onLine);
+var tests=["api=abc","api=reports","api=pairuse&c=000000","api=pairstart"];
+for(var i=0;i<tests.length;i++){var q=tests[i];
+ try{var r=await fetch(API_URL+"?"+q);var t=await r.text();L("[fetch] "+q+" => HTTP "+r.status+" "+t.slice(0,80))}catch(e){L("[fetch] "+q+" => 失敗: "+e)}
+ try{var d=await jsonp(q);L("[jsonp] "+q+" => "+JSON.stringify(d).slice(0,80))}catch(e){L("[jsonp] "+q+" => 失敗: "+e)}
+ try{var r2=await fetch(API_URL+"?"+q,{credentials:"omit",mode:"cors",redirect:"follow"});var t2=await r2.text();L("[fetch omit] "+q+" => HTTP "+r2.status+" "+t2.slice(0,60))}catch(e){L("[fetch omit] "+q+" => 失敗: "+e)}
+}L("— 完成 —")};
+</script></body></html>
