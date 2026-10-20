@@ -112,13 +112,13 @@
   <button id="menuBtn" aria-label="開啟功能列" aria-expanded="false">☰<span class="dot" id="menuDot"></span></button>
   <img class="logo" src="icon-192.png" alt="虹揚廣告 LOGO">
   <div class="ttl"><h1>虹揚廣告</h1><p class="sub" id="pageTitle">實價登錄查詢</p></div>
-  <div class="ver" id="ver">V2.04</div>
+  <div class="ver" id="ver">V2.05</div>
 </header>
 
 <div id="mask"></div>
 <aside id="drawer" aria-label="功能列">
   <div class="dhead">
-    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.04</span></small></div></div>
+    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.05</span></small></div></div>
     <div class="who" id="who"></div>
   </div>
   <nav class="menu">
@@ -202,7 +202,7 @@
       <div class="acts"><a class="rl" id="rptLine" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 錯誤回報</a><a class="rt" href="tel:0926109163">📞 電話聯絡</a></div>
     </div>
   </section>
-  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.04</span>（測試版・固定網址）</p>
+  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.05</span>（測試版・固定網址）</p>
 </main>
 
 <div class="fab"><a class="ft" href="tel:0926109163">📞 電話</a><a class="fl" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 聯絡</a></div>
@@ -211,7 +211,7 @@
 
 <script src="config.js"></script>
 <script>
-const APP_VERSION = "V2.04";
+const APP_VERSION = "V2.05";
 const H = "https:/" + "/";
 const TOWNS = ["宜蘭市","頭城鎮","礁溪鄉","壯圍鄉","員山鄉","羅東鎮","蘇澳鎮","冬山鄉","五結鄉","三星鄉","大同鄉","南澳鄉"];
 const $ = id => document.getElementById(id);
@@ -303,7 +303,7 @@ async function pairStart(){
 }
 function pairUse(){
   modal("輸入綁定碼", "請在已用 LINE 登入的裝置，選單按「取得桌面版綁定碼」，再把 6 位數字輸入這裡。", [["取消", null], ["登入", async v => {
-    try { const r = await api({ api: "pairuse", c: v }); if (r.error) throw new Error(r.error); await finishLogin(r); }
+    try { const r = await api({ api: "pairuse", code: v }); if (r.error) throw new Error(r.error); await finishLogin(r); }
     catch (e) { modal("綁定失敗", esc(e && e.message || e), [["關閉", null]]); }
   }, "primary"]], "6 位數字");
 }
