@@ -112,13 +112,13 @@
   <button id="menuBtn" aria-label="開啟功能列" aria-expanded="false">☰<span class="dot" id="menuDot"></span></button>
   <img class="logo" src="icon-192.png" alt="虹揚廣告 LOGO">
   <div class="ttl"><h1>虹揚廣告</h1><p class="sub" id="pageTitle">實價登錄查詢</p></div>
-  <div class="ver" id="ver">V2.08</div>
+  <div class="ver" id="ver">V2.09</div>
 </header>
 
 <div id="mask"></div>
 <aside id="drawer" aria-label="功能列">
   <div class="dhead">
-    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.08</span></small></div></div>
+    <div class="brand"><img src="icon-192.png" alt=""><div><b>虹揚廣告</b><small>宜蘭預售屋查詢　<span id="ver3">V2.09</span></small></div></div>
     <div class="who" id="who"></div>
   </div>
   <nav class="menu">
@@ -202,7 +202,7 @@
       <div class="acts"><a class="rl" id="rptLine" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 錯誤回報</a><a class="rt" href="tel:0926109163">📞 電話聯絡</a></div>
     </div>
   </section>
-  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.08</span>（測試版・固定網址）</p>
+  <p class="muted" style="text-align:center;margin:0 0 20px;font-size:12px">虹揚廣告預售實價登錄查詢 <span id="ver2">V2.09</span>（測試版・固定網址）</p>
 </main>
 
 <div class="fab"><a class="ft" href="tel:0926109163">📞 電話</a><a class="fl" href="https://line.me/R/ti/p/%40homeyang" target="_blank" rel="noopener">💬 LINE 聯絡</a></div>
@@ -211,7 +211,7 @@
 
 <script src="config.js"></script>
 <script>
-const APP_VERSION = "V2.08";
+const APP_VERSION = "V2.09";
 const H = "https:/" + "/";
 const TOWNS = ["宜蘭市","頭城鎮","礁溪鄉","壯圍鄉","員山鄉","羅東鎮","蘇澳鎮","冬山鄉","五結鄉","三星鄉","大同鄉","南澳鄉"];
 const $ = id => document.getElementById(id);
@@ -519,7 +519,12 @@ function onData(d){
     $("srcInfo").textContent = `資料來源：「實價登錄」預售屋買賣 ${ROWS.length} 筆` + (yms.length ? `（成交 ${ym(Math.min(...yms))} ~ ${ym(Math.max(...yms))}）` : "") + `，更新於 ${d.updated}` + (d.skipped ? `；${d.skipped} 筆交易日期無法辨識已略過` : "");
     const lt = d.latest || ""; $("latest").textContent = "✔ 資料已是最新：" + (lt || ("更新於 " + d.updated));
     try { $("rptLine").href = H + "line.me/R/oaMessage/%40homeyang/?" + encodeURIComponent("【實價登錄系統回報】\n版本：" + APP_VERSION + "\n資料：" + (lt || d.updated) + "\n問題說明："); } catch (e) {}
-    initForm(); query();
+    initForm();
+    try {   /* 從 LINE 推播卡片點進來：?t=鄉鎮&n=案名 → 直接帶入該案（全部時間） */
+      const q = new URLSearchParams(location.search), qt = q.get("t"), qn = q.get("n");
+      if (qn && !window.__deep) { window.__deep = 1; if (qt) $("town").value = qt; $("caseName").value = qn; $("allTime").checked = true; $("allTime").dispatchEvent(new Event("change")); }
+    } catch (e) {}
+    query();
     $("loading").style.display = "none"; apply(); renderSubs();
   } catch (e) { clearInterval(_slow); stage("顯示失敗：" + (e && e.message ? e.message : e)); $("slow").textContent = ""; }
 }
